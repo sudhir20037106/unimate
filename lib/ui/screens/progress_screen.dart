@@ -181,7 +181,7 @@ class ProgressScreen extends StatelessWidget {
                             ),
                             color: i == week.length - 1
                                 ? theme.colorScheme.primary
-                                : theme.colorScheme.primary.withOpacity(0.45),
+                                : theme.colorScheme.primary.withValues(alpha: 0.45),
                           ),
                         ],
                       ),

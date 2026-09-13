@@ -20,132 +20,13 @@ import '../widgets/section_header.dart';
 class PlannerScreen extends StatelessWidget {
   const PlannerScreen({super.key});
 
-  Future<void> _addSession(BuildContext context) async {
-    final PlannerController planner = context.read<PlannerController>();
-    final TextEditingController subject = TextEditingController(
-      text: planner.subjects.isEmpty ? '' : planner.subjects.first,
-    );
-    DateTime date = DateTime.now();
-    TimeOfDay time = TimeOfDay.now();
-    double duration = 50;
-
-    await showModalBottomSheet<void>(
+  Future<void> _addSession(BuildContext context) {
+    return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (BuildContext sheetContext) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setSheetState) {
-            return Padding(
-              padding: EdgeInsets.fromLTRB(
-                20,
-                0,
-                20,
-                MediaQuery.of(context).viewInsets.bottom + 24,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  Text(
-                    'Plan a study session',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 18),
-                  TextField(
-                    controller: subject,
-                    textCapitalization: TextCapitalization.characters,
-                    decoration: const InputDecoration(
-                      labelText: 'Subject',
-                      prefixIcon: Icon(Icons.menu_book_rounded),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.event_rounded, size: 18),
-                          label: Text(Formatters.dayMonth(date)),
-                          onPressed: () async {
-                            final DateTime? picked = await showDatePicker(
-                              context: context,
-                              initialDate: date,
-                              firstDate: DateTime.now()
-                                  .subtract(const Duration(days: 7)),
-                              lastDate: DateTime.now()
-                                  .add(const Duration(days: 180)),
-                            );
-                            if (picked != null) {
-                              setSheetState(() => date = picked);
-                            }
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.schedule_rounded, size: 18),
-                          label: Text(time.format(context)),
-                          onPressed: () async {
-                            final TimeOfDay? picked = await showTimePicker(
-                              context: context,
-                              initialTime: time,
-                            );
-                            if (picked != null) {
-                              setSheetState(() => time = picked);
-                            }
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: <Widget>[
-                      const Text('Duration'),
-                      const Spacer(),
-                      Text(Formatters.minutes(duration.round())),
-                    ],
-                  ),
-                  Slider(
-                    value: duration,
-                    min: 15,
-                    max: 180,
-                    divisions: 11,
-                    label: Formatters.minutes(duration.round()),
-                    onChanged: (double value) =>
-                        setSheetState(() => duration = value),
-                  ),
-                  const SizedBox(height: 12),
-                  FilledButton(
-                    onPressed: () {
-                      planner.addSession(
-                        subject: subject.text,
-                        start: DateTime(
-                          date.year,
-                          date.month,
-                          date.day,
-                          time.hour,
-                          time.minute,
-                        ),
-                        durationMinutes: duration.round(),
-                      );
-                      Navigator.of(sheetContext).pop();
-                    },
-                    child: const Text('Add session'),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+      builder: (BuildContext sheetContext) => const _PlanSessionSheet(),
     );
-    subject.dispose();
   }
 
   @override
@@ -244,7 +125,7 @@ class _PomodoroPanel extends StatelessWidget {
             duration: settings.animation(const Duration(milliseconds: 300)),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
-              color: timer.phase.colour.withOpacity(0.12),
+              color: timer.phase.colour.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -384,7 +265,7 @@ class _PomodoroPanel extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer.withOpacity(0.45),
+              color: theme.colorScheme.primaryContainer.withValues(alpha: 0.45),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -484,6 +365,154 @@ class _SessionTile extends StatelessWidget {
             onPressed: () => planner.deleteSession(session.id),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Bottom sheet for planning a study session.
+///
+/// The sheet is a [StatefulWidget] so that its text controller is disposed by
+/// the framework once the sheet has left the tree, rather than by the caller as
+/// soon as the awaited future resolves — which happens while the sheet is still
+/// animating out and its fields are still mounted.
+class _PlanSessionSheet extends StatefulWidget {
+  const _PlanSessionSheet();
+
+  @override
+  State<_PlanSessionSheet> createState() => _PlanSessionSheetState();
+}
+
+class _PlanSessionSheetState extends State<_PlanSessionSheet> {
+  late final TextEditingController _subject;
+  DateTime _date = DateTime.now();
+  TimeOfDay _time = TimeOfDay.now();
+  double _duration = 50;
+
+  @override
+  void initState() {
+    super.initState();
+    final List<String> subjects = context.read<PlannerController>().subjects;
+    _subject = TextEditingController(
+      text: subjects.isEmpty ? '' : subjects.first,
+    );
+  }
+
+  @override
+  void dispose() {
+    _subject.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime.now().subtract(const Duration(days: 7)),
+      lastDate: DateTime.now().add(const Duration(days: 180)),
+    );
+    if (picked != null && mounted) {
+      setState(() => _date = picked);
+    }
+  }
+
+  Future<void> _pickTime() async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _time,
+    );
+    if (picked != null && mounted) {
+      setState(() => _time = picked);
+    }
+  }
+
+  void _save() {
+    context.read<PlannerController>().addSession(
+          subject: _subject.text,
+          start: DateTime(
+            _date.year,
+            _date.month,
+            _date.day,
+            _time.hour,
+            _time.minute,
+          ),
+          durationMinutes: _duration.round(),
+        );
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        0,
+        20,
+        MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Text(
+              'Plan a study session',
+              style: theme.textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 18),
+            TextField(
+              controller: _subject,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                labelText: 'Subject',
+                prefixIcon: Icon(Icons.menu_book_rounded),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.event_rounded, size: 18),
+                    label: Text(Formatters.dayMonth(_date)),
+                    onPressed: _pickDate,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.schedule_rounded, size: 18),
+                    label: Text(_time.format(context)),
+                    onPressed: _pickTime,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: <Widget>[
+                const Text('Duration'),
+                const Spacer(),
+                Text(Formatters.minutes(_duration.round())),
+              ],
+            ),
+            Slider(
+              value: _duration,
+              min: 15,
+              max: 180,
+              divisions: 11,
+              label: Formatters.minutes(_duration.round()),
+              onChanged: (double value) => setState(() => _duration = value),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: _save,
+              child: const Text('Add session'),
+            ),
+          ],
+        ),
       ),
     );
   }

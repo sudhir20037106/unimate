@@ -33,7 +33,7 @@ class StatTile extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: colour.withOpacity(0.14),
+              color: colour.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, size: 20, color: colour),

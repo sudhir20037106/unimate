@@ -82,7 +82,7 @@ class AppTheme {
         filled: true,
         fillColor: isLight
             ? Colors.white
-            : scheme.surface.withOpacity(0.6),
+            : scheme.surface.withValues(alpha: 0.6),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
@@ -121,7 +121,7 @@ class AppTheme {
         thickness: 1,
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
-        linearTrackColor: scheme.surfaceVariant,
+        linearTrackColor: scheme.surfaceContainerHighest,
         color: scheme.primary,
       ),
     );

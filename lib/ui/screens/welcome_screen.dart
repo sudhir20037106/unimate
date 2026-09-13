@@ -43,10 +43,10 @@ class WelcomeScreen extends StatelessWidget {
                           width: 86,
                           height: 86,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.18),
+                            color: Colors.white.withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(24),
                             border: Border.all(
-                              color: Colors.white.withOpacity(0.35),
+                              color: Colors.white.withValues(alpha: 0.35),
                             ),
                           ),
                           child: const Icon(
@@ -71,7 +71,7 @@ class WelcomeScreen extends StatelessWidget {
                         'Deadlines, focus sessions, timetable and progress '
                         'in one place.',
                         style: theme.textTheme.titleMedium?.copyWith(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           height: 1.45,
                         ),
                       ),
@@ -106,7 +106,7 @@ class WelcomeScreen extends StatelessWidget {
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white,
                           side: BorderSide(
-                            color: Colors.white.withOpacity(0.7),
+                            color: Colors.white.withValues(alpha: 0.7),
                           ),
                         ),
                         onPressed: () => Navigator.of(context).push(
@@ -141,13 +141,13 @@ class _FeatureLine extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: <Widget>[
-          Icon(icon, color: Colors.white.withOpacity(0.95), size: 20),
+          Icon(icon, color: Colors.white.withValues(alpha: 0.95), size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               text,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withOpacity(0.92),
+                    color: Colors.white.withValues(alpha: 0.92),
                   ),
             ),
           ),

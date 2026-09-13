@@ -224,7 +224,7 @@ class _TasksScreenState extends State<TasksScreen> {
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: theme.colorScheme.surfaceVariant,
+                                    color: theme.colorScheme.surfaceContainerHighest,
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(

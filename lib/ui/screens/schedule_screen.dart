@@ -23,153 +23,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   late int _selectedWeekday = DateTime.now().weekday;
 
   Future<void> _addClass() async {
-    final PlannerController planner = context.read<PlannerController>();
-    final TextEditingController subject = TextEditingController();
-    final TextEditingController room = TextEditingController();
-    int weekday = _selectedWeekday;
-    TimeOfDay start = const TimeOfDay(hour: 9, minute: 0);
-    double duration = 60;
-    String mode = 'On campus';
-
-    await showModalBottomSheet<void>(
+    final int? weekday = await showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (BuildContext sheetContext) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setSheetState) {
-            return Padding(
-              padding: EdgeInsets.fromLTRB(
-                20,
-                0,
-                20,
-                MediaQuery.of(context).viewInsets.bottom + 24,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    Text(
-                      'Add a class',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleLarge
-                          ?.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 18),
-                    TextField(
-                      controller: subject,
-                      decoration: const InputDecoration(
-                        labelText: 'Subject',
-                        prefixIcon: Icon(Icons.menu_book_rounded),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: room,
-                      decoration: const InputDecoration(
-                        labelText: 'Room or link',
-                        prefixIcon: Icon(Icons.place_outlined),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    DropdownButtonFormField<int>(
-                      value: weekday,
-                      decoration: const InputDecoration(labelText: 'Day'),
-                      items: List<DropdownMenuItem<int>>.generate(
-                        7,
-                        (int index) => DropdownMenuItem<int>(
-                          value: index + 1,
-                          child: Text(Formatters.weekdayName(index + 1)),
-                        ),
-                      ),
-                      onChanged: (int? value) =>
-                          setSheetState(() => weekday = value ?? weekday),
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            icon: const Icon(Icons.schedule_rounded, size: 18),
-                            label: Text(start.format(context)),
-                            onPressed: () async {
-                              final TimeOfDay? picked = await showTimePicker(
-                                context: context,
-                                initialTime: start,
-                              );
-                              if (picked != null) {
-                                setSheetState(() => start = picked);
-                              }
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            value: mode,
-                            decoration:
-                                const InputDecoration(labelText: 'Mode'),
-                            items: const <DropdownMenuItem<String>>[
-                              DropdownMenuItem<String>(
-                                value: 'On campus',
-                                child: Text('On campus'),
-                              ),
-                              DropdownMenuItem<String>(
-                                value: 'Online',
-                                child: Text('Online'),
-                              ),
-                            ],
-                            onChanged: (String? value) =>
-                                setSheetState(() => mode = value ?? mode),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: <Widget>[
-                        const Text('Duration'),
-                        const Spacer(),
-                        Text(Formatters.minutes(duration.round())),
-                      ],
-                    ),
-                    Slider(
-                      value: duration,
-                      min: 30,
-                      max: 240,
-                      divisions: 14,
-                      label: Formatters.minutes(duration.round()),
-                      onChanged: (double value) =>
-                          setSheetState(() => duration = value),
-                    ),
-                    const SizedBox(height: 12),
-                    FilledButton(
-                      onPressed: () {
-                        planner.addClass(
-                          subject: subject.text,
-                          weekday: weekday,
-                          startMinuteOfDay: start.hour * 60 + start.minute,
-                          durationMinutes: duration.round(),
-                          room: room.text,
-                          mode: mode,
-                        );
-                        Navigator.of(sheetContext).pop();
-                      },
-                      child: const Text('Add class'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
+      builder: (BuildContext sheetContext) =>
+          _AddClassSheet(initialWeekday: _selectedWeekday),
     );
-    subject.dispose();
-    room.dispose();
-    if (mounted) {
+    if (weekday != null && mounted) {
       setState(() => _selectedWeekday = weekday);
     }
   }
@@ -231,8 +92,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         decoration: BoxDecoration(
                           color: selected
                               ? theme.colorScheme.primary
-                              : theme.colorScheme.surfaceVariant
-                                  .withOpacity(0.5),
+                              : theme.colorScheme.surfaceContainerHighest
+                                  .withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(16),
                           border: weekday == todayWeekday && !selected
                               ? Border.all(
@@ -261,9 +122,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                               decoration: BoxDecoration(
                                 color: selected
                                     ? theme.colorScheme.onPrimary
-                                        .withOpacity(0.22)
+                                        .withValues(alpha: 0.22)
                                     : theme.colorScheme.primary
-                                        .withOpacity(0.12),
+                                        .withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -410,6 +271,167 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         );
                       },
                     ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Bottom sheet for adding a timetable entry.
+///
+/// Like the study-session sheet, this owns its text controllers so the
+/// framework disposes them after the sheet has left the tree. It returns the
+/// chosen weekday through [Navigator.pop] so the caller can select that day.
+class _AddClassSheet extends StatefulWidget {
+  const _AddClassSheet({required this.initialWeekday});
+
+  final int initialWeekday;
+
+  @override
+  State<_AddClassSheet> createState() => _AddClassSheetState();
+}
+
+class _AddClassSheetState extends State<_AddClassSheet> {
+  final TextEditingController _subject = TextEditingController();
+  final TextEditingController _room = TextEditingController();
+
+  late int _weekday = widget.initialWeekday;
+  TimeOfDay _start = const TimeOfDay(hour: 9, minute: 0);
+  double _duration = 60;
+  String _mode = 'On campus';
+
+  @override
+  void dispose() {
+    _subject.dispose();
+    _room.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickStart() async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _start,
+    );
+    if (picked != null && mounted) {
+      setState(() => _start = picked);
+    }
+  }
+
+  void _save() {
+    context.read<PlannerController>().addClass(
+          subject: _subject.text,
+          weekday: _weekday,
+          startMinuteOfDay: _start.hour * 60 + _start.minute,
+          durationMinutes: _duration.round(),
+          room: _room.text,
+          mode: _mode,
+        );
+    Navigator.of(context).pop(_weekday);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        0,
+        20,
+        MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Text(
+              'Add a class',
+              style: theme.textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 18),
+            TextField(
+              controller: _subject,
+              decoration: const InputDecoration(
+                labelText: 'Subject',
+                prefixIcon: Icon(Icons.menu_book_rounded),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _room,
+              decoration: const InputDecoration(
+                labelText: 'Room or link',
+                prefixIcon: Icon(Icons.place_outlined),
+              ),
+            ),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<int>(
+              initialValue: _weekday,
+              decoration: const InputDecoration(labelText: 'Day'),
+              items: List<DropdownMenuItem<int>>.generate(
+                7,
+                (int index) => DropdownMenuItem<int>(
+                  value: index + 1,
+                  child: Text(Formatters.weekdayName(index + 1)),
+                ),
+              ),
+              onChanged: (int? value) =>
+                  setState(() => _weekday = value ?? _weekday),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.schedule_rounded, size: 18),
+                    label: Text(_start.format(context)),
+                    onPressed: _pickStart,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _mode,
+                    decoration: const InputDecoration(labelText: 'Mode'),
+                    items: const <DropdownMenuItem<String>>[
+                      DropdownMenuItem<String>(
+                        value: 'On campus',
+                        child: Text('On campus'),
+                      ),
+                      DropdownMenuItem<String>(
+                        value: 'Online',
+                        child: Text('Online'),
+                      ),
+                    ],
+                    onChanged: (String? value) =>
+                        setState(() => _mode = value ?? _mode),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: <Widget>[
+                const Text('Duration'),
+                const Spacer(),
+                Text(Formatters.minutes(_duration.round())),
+              ],
+            ),
+            Slider(
+              value: _duration,
+              min: 30,
+              max: 240,
+              divisions: 14,
+              label: Formatters.minutes(_duration.round()),
+              onChanged: (double value) => setState(() => _duration = value),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: _save,
+              child: const Text('Add class'),
             ),
           ],
         ),

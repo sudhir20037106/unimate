@@ -229,48 +229,11 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _editProfile(BuildContext context, AuthController auth) async {
-    final TextEditingController name =
-        TextEditingController(text: auth.displayName);
-    final TextEditingController email =
-        TextEditingController(text: auth.email);
-
-    await showDialog<void>(
+  Future<void> _editProfile(BuildContext context, AuthController auth) {
+    return showDialog<void>(
       context: context,
-      builder: (BuildContext dialogContext) => AlertDialog(
-        title: const Text('Edit profile'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            TextField(
-              controller: name,
-              decoration: const InputDecoration(labelText: 'Full name'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: email,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: 'Email'),
-            ),
-          ],
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              auth.updateProfile(name: name.text, email: email.text);
-              Navigator.of(dialogContext).pop();
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+      builder: (BuildContext dialogContext) => _EditProfileDialog(auth: auth),
     );
-    name.dispose();
-    email.dispose();
   }
 }
 
@@ -290,6 +253,78 @@ class _StatRow extends StatelessWidget {
           value,
           style: theme.textTheme.titleSmall
               ?.copyWith(fontWeight: FontWeight.w700),
+        ),
+      ],
+    );
+  }
+}
+
+/// The profile editor owns its own text controllers.
+///
+/// Creating the controllers in the calling method and disposing them as soon as
+/// `showDialog` resolves tears them down while the dialog is still running its
+/// exit animation, leaving the text fields attached to disposed controllers and
+/// the element tree in an inconsistent state. Holding them in a [State] hands
+/// that lifecycle to the framework, which disposes them only once the dialog has
+/// actually left the tree.
+class _EditProfileDialog extends StatefulWidget {
+  const _EditProfileDialog({required this.auth});
+
+  final AuthController auth;
+
+  @override
+  State<_EditProfileDialog> createState() => _EditProfileDialogState();
+}
+
+class _EditProfileDialogState extends State<_EditProfileDialog> {
+  late final TextEditingController _name;
+  late final TextEditingController _email;
+
+  @override
+  void initState() {
+    super.initState();
+    _name = TextEditingController(text: widget.auth.displayName);
+    _email = TextEditingController(text: widget.auth.email);
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _email.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit profile'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          TextField(
+            controller: _name,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(labelText: 'Full name'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _email,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(labelText: 'Email'),
+          ),
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () {
+            widget.auth.updateProfile(name: _name.text, email: _email.text);
+            Navigator.of(context).pop();
+          },
+          child: const Text('Save'),
         ),
       ],
     );

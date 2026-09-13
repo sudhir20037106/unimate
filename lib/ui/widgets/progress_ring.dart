@@ -31,7 +31,7 @@ class ProgressRing extends StatelessWidget {
         painter: _RingPainter(
           progress: progress.clamp(0.0, 1.0),
           colour: colour,
-          track: theme.colorScheme.surfaceVariant,
+          track: theme.colorScheme.surfaceContainerHighest,
           strokeWidth: strokeWidth,
         ),
         child: Center(child: child),

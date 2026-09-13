@@ -25,7 +25,7 @@ Future<void> main() async {
 
   runApp(
     MultiProvider(
-      providers: <SingleChildWidget>[
+      providers: [
         ChangeNotifierProvider<SettingsController>(
           create: (_) => SettingsController(store),
         ),
